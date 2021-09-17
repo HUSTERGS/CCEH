@@ -3,8 +3,8 @@
 
 #define CAS(_p, _u, _v)  (__atomic_compare_exchange_n (_p, _u, _v, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE))
 
-#include "util/pair.h"
-#include "util/timer.h"
+#include "pair.h"
+#include "timer.h"
 
 class Hash {
   public:

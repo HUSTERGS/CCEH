@@ -5,9 +5,9 @@
 #include <unordered_map>
 #include <stdio.h>
 #include <vector>
-#include "src/CCEH.h"
-#include "src/hash.h"
-#include "src/util.h"
+#include "CCEH.h"
+#include "hash.h"
+#include "util.h"
 
 #define f_seed 0xc70697UL
 #define s_seed 0xc70697UL

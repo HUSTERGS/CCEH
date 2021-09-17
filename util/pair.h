@@ -3,8 +3,8 @@
 
 #include <cstdlib>
 
-typedef size_t Key_t;
-typedef const char* Value_t;
+typedef uint64_t Key_t;
+typedef uint64_t Value_t;
 
 const Key_t SENTINEL = -2; // 11111...110
 const Key_t INVALID = -1; // 11111...111

@@ -6,8 +6,8 @@
 #include <vector>
 #include <pthread.h>
 #include <iostream>
-#include "util/pair.h"
-#include "src/hash.h"
+#include "pair.h"
+#include "hash.h"
 
 constexpr size_t kSegmentBits = 8;
 constexpr size_t kMask = (1 << kSegmentBits)-1;

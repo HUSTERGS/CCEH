@@ -1,5 +1,4 @@
-#ifndef UTIL_HASH_H_
-#define UTIL_HASH_H_
+#pragma once
 
 #include <functional>
 #include <stddef.h>
@@ -253,4 +252,3 @@ inline size_t h(const void* key, size_t len, size_t seed=0xc70697UL) {
   return hash_funcs[0](key, len, seed);
 }
 
-#endif  // UTIL_HASH_H_

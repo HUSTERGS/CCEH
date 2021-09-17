@@ -8,12 +8,12 @@
 #include <cstdlib>
 #include <pthread.h>
 #include <libpmemobj.h>
-#include "src/util.h"
+#include "util.h"
 
 #define TOID_ARRAY(x) TOID(x)
 
-typedef size_t Key_t;
-typedef const char* Value_t;
+typedef uint64_t Key_t;
+typedef uint64_t Value_t;
 
 const Key_t SENTINEL = -2;
 const Key_t INVALID = -1;

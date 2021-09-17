@@ -5,9 +5,9 @@
 #include <cassert>
 #include <unordered_map>
 #include <sys/types.h>
-#include "util/persist.h"
-#include "util/hash.h"
-#include "src/CCEH.h"
+#include "persist.h"
+#include "hash_util.h"
+#include "CCEH.h"
 
 #define f_seed 0xc70697UL
 #define s_seed 0xc70697UL
