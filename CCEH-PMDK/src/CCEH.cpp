@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <vector>
 #include "CCEH.h"
-#include "hash.h"
+#include "hash_util.h"
 #include "util.h"
 
 #define f_seed 0xc70697UL
