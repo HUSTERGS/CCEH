@@ -176,7 +176,7 @@ class CCEH{
 
 	void Insert(PMEMobjpool*, Key_t&, Value_t);
 	bool InsertOnly(PMEMobjpool*, Key_t&, Value_t);	
-	bool Delete(Key_t&);
+	bool Delete(PMEMobjpool *pop, Key_t&);
 	Value_t Get(Key_t&);
 	Value_t FindAnyway(Key_t&);
 

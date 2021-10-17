@@ -368,6 +368,75 @@ DIR_RETRY:
 
 // TODO
 bool CCEH::Delete(Key_t& key) {
+	auto f_hash = hash_funcs[0](&key, sizeof(Key_t), f_seed);
+    // auto f_hash = hash_funcs[0](raw.ptr(), raw.size(), f_seed);
+    auto f_idx = (f_hash & kMask) * kNumPairPerCacheLine;
+
+    RETRY:
+    while (dir->sema < 0) {
+        asm("nop");
+    }
+
+    auto x = (f_hash >> (8 * sizeof(f_hash) - dir->depth));
+    auto target = dir->_[x];
+
+    if (!target) {
+        std::this_thread::yield();
+        goto RETRY;
+    }
+
+#ifdef INPLACE
+    /* acquire segment shared lock */
+    if (!D_RW(target)->lock()) {
+        std::this_thread::yield();
+        goto RETRY;
+    }
+#endif
+
+    auto target_check = (f_hash >> (8 * sizeof(f_hash) - dir->depth));
+    if (target != dir->_[target_check]) {
+        target->unlock();
+        std::this_thread::yield();
+        goto RETRY;
+    }
+
+    for (size_t i = 0; i < kNumPairPerCacheLine * kNumCacheLine; ++i) {
+        auto loc = (f_idx + i) % Segment::kNumSlot;
+        auto tmp_key = target->_[loc].key;
+        if ((tmp_key != INVALID && tmp_key != SENTINEL ) && tmp_key == key) {
+            //Value_t v = D_RO(target)->bucket[loc].value;
+            target->_[loc].key = INVALID;
+			clflush((char*)&target->_[loc], sizeof(Pair));
+#ifdef INPLACE
+            /* key found, release segment shared lock */
+            D_RW(target)->unlock();
+#endif
+            return true;
+        }
+    }
+
+    auto s_hash = hash_funcs[2](&key, sizeof(Key_t), s_seed);
+    // auto s_hash = hash_funcs[2](raw.ptr(), raw.size(), s_seed);
+    auto s_idx = (s_hash & kMask) * kNumPairPerCacheLine;
+    for (size_t i = 0; i < kNumPairPerCacheLine * kNumCacheLine; ++i) {
+        auto loc = (s_idx + i) % Segment::kNumSlot;
+        auto tmp_key = target->_[loc].key;
+        if ((tmp_key != INVALID && tmp_key != SENTINEL ) && tmp_key == key) {
+            //if (D_RO(target)->bucket[loc].key == key) {
+            //Value_t v = D_RO(target)->bucket[loc].value;
+            target->_[loc].key = INVALID;
+			clflush((char*)&target->_[loc], sizeof(Pair));
+#ifdef INPLACE
+            D_RW(target)->unlock();
+#endif
+            return true;
+        }
+    }
+
+#ifdef INPLACE
+    /* key not found, release segment shared lock */
+    D_RW(target)->unlock();
+#endif
     return false;
 }
 
