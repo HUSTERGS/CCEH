@@ -174,7 +174,7 @@ class CCEH{
 	void initCCEH(PMEMobjpool*);
 	void initCCEH(PMEMobjpool*, size_t);
 
-	void Insert(PMEMobjpool*, Key_t&, Value_t);
+	bool Insert(PMEMobjpool*, Key_t&, Value_t);
 	bool InsertOnly(PMEMobjpool*, Key_t&, Value_t);	
 	bool Delete(PMEMobjpool *pop, Key_t&);
 	Value_t Get(Key_t&);

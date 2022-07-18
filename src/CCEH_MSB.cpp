@@ -177,7 +177,7 @@ RETRY:
 
 
 
-void CCEH::Insert(Key_t& key, Value_t value) {
+bool CCEH::Insert(Key_t& key, Value_t value) {
     auto f_hash = hash_funcs[0](&key, sizeof(Key_t), f_seed);
     auto f_idx = (f_hash & kMask) * kNumPairPerCacheLine;
 
@@ -205,6 +205,20 @@ RETRY:
 
     auto target_local_depth = target->local_depth;
     auto pattern = (f_hash >> (8*sizeof(f_hash) - target->local_depth));
+	// 检查这个桶里面是否已经存在这个key了
+	for(unsigned i=0; i<kNumPairPerCacheLine * kNumCacheLine; ++i){
+		auto loc = (f_idx + i) % Segment::kNumSlot;
+		auto _key = target->_[loc].key;
+		if((((hash_funcs[0](&target->_[loc].key, sizeof(Key_t), f_seed) >> (8*sizeof(f_hash)-target_local_depth)) != pattern) || (target->_[loc].key == INVALID)) && (target->_[loc].key != SENTINEL)){
+			// empty slot
+			continue;
+		}
+		if (key == _key) {
+			target->unlock();
+			return false;
+		}
+	}
+
     for(unsigned i=0; i<kNumPairPerCacheLine * kNumCacheLine; ++i){
 	auto loc = (f_idx + i) % Segment::kNumSlot;
 	auto _key = target->_[loc].key;
@@ -217,13 +231,25 @@ RETRY:
 		clflush((char*)&target->_[loc], sizeof(Pair));
 		/* release segment exclusive lock */
 		target->unlock();
-		return;
+		return true;
 	    }
 	}
     }
 
     auto s_hash = hash_funcs[2](&key, sizeof(Key_t), s_seed);
     auto s_idx = (s_hash & kMask) * kNumPairPerCacheLine;
+	for(unsigned i=0; i<kNumPairPerCacheLine * kNumCacheLine; ++i){
+		auto loc = (s_idx + i) % Segment::kNumSlot;
+		auto _key = target->_[loc].key;
+		if((((hash_funcs[0](&target->_[loc].key, sizeof(Key_t), f_seed) >> (8*sizeof(f_hash)-target_local_depth)) != pattern) || (target->_[loc].key == INVALID)) && (target->_[loc].key != SENTINEL)){
+			// empty slot
+			continue;
+		}
+		if (key == _key) {
+			target->unlock();
+			return false;
+		}
+	}
 
     for(unsigned i=0; i<kNumPairPerCacheLine * kNumCacheLine; ++i){
 	auto loc = (s_idx + i) % Segment::kNumSlot;
@@ -237,7 +263,7 @@ RETRY:
 		clflush((char*)&target->_[loc], sizeof(Pair));
 		/* release segment exclusive lock */
 		target->unlock();
-		return;
+		return true;
 	    }
 	}
     }

@@ -188,7 +188,7 @@ void CCEH::initCCEH(PMEMobjpool* pop, size_t initCap){
     }
 }
  
-void CCEH::Insert(PMEMobjpool* pop, Key_t& key, Value_t value){
+bool CCEH::Insert(PMEMobjpool* pop, Key_t& key, Value_t value){
 
     auto f_hash = hash_funcs[0](&key, sizeof(Key_t), f_seed);
     auto f_idx = (f_hash & kMask) * kNumPairPerCacheLine;
@@ -216,6 +216,23 @@ RETRY:
     }
 
     auto pattern = (f_hash >> (8*sizeof(f_hash) - D_RO(target)->local_depth));
+	// 检查这个桶里面是否已经存在这个key了
+	for(unsigned i=0; i<kNumPairPerCacheLine * kNumCacheLine; ++i){
+		auto loc = (f_idx + i) % Segment::kNumSlot;
+		auto _key = D_RO(target)->bucket[loc].key;
+		if((((hash_funcs[0](&D_RO(target)->bucket[loc].key, sizeof(Key_t), f_seed) >> (8*sizeof(f_hash)-D_RO(target)->local_depth)) != pattern) || (D_RO(target)->bucket[loc].key == INVALID)) && (D_RO(target)->bucket[loc].key != SENTINEL)) {
+			// empty slot
+			continue;
+		}
+		if (key == _key) {
+			D_RW(target)->bucket[loc].value = value;
+			mfence();
+			pmemobj_persist(pop, (char*)&D_RO(target)->bucket[loc], sizeof(Pair));
+			D_RW(target)->unlock();
+			return false;
+		}
+	}
+
     for(unsigned i=0; i<kNumPairPerCacheLine * kNumCacheLine; ++i){
 	auto loc = (f_idx + i) % Segment::kNumSlot;
 	auto _key = D_RO(target)->bucket[loc].key;
@@ -228,13 +245,28 @@ RETRY:
 		pmemobj_persist(pop, (char*)&D_RO(target)->bucket[loc], sizeof(Pair));
 		/* release segment exclusive lock */
 		D_RW(target)->unlock();
-		return;
+		return true;
 	    }
 	}
     }
 
     auto s_hash = hash_funcs[2](&key, sizeof(Key_t), s_seed);
     auto s_idx = (s_hash & kMask) * kNumPairPerCacheLine;
+	// 检查这个桶里面是否已经存在这个key了
+	for(unsigned i=0; i<kNumPairPerCacheLine * kNumCacheLine; ++i){
+		auto loc = (s_idx + i) % Segment::kNumSlot;
+		auto _key = D_RO(target)->bucket[loc].key;
+		if((((hash_funcs[0](&D_RO(target)->bucket[loc].key, sizeof(Key_t), f_seed) >> (8*sizeof(s_hash)-D_RO(target)->local_depth)) != pattern) || (D_RO(target)->bucket[loc].key == INVALID)) && (D_RO(target)->bucket[loc].key != SENTINEL)){
+			continue;
+		}
+		if (key == _key) {
+			D_RW(target)->bucket[loc].value = value;
+			mfence();
+			pmemobj_persist(pop, (char*)&D_RO(target)->bucket[loc], sizeof(Pair));
+			D_RW(target)->unlock();
+			return false;
+		}
+	}
 
     for(unsigned i=0; i<kNumPairPerCacheLine * kNumCacheLine; ++i){
 	auto loc = (s_idx + i) % Segment::kNumSlot;
@@ -246,7 +278,7 @@ RETRY:
 		D_RW(target)->bucket[loc].key = key;
 		pmemobj_persist(pop, (char*)&D_RO(target)->bucket[loc], sizeof(Pair));
 		D_RW(target)->unlock();
-		return;
+		return true;
 	    }
 	}
     }
@@ -286,7 +318,7 @@ RETRY:
 	}
 	D_RW(target)->execute_path(pop, *path, key, value);
 	D_RW(target)->sema = 0;
-	return;
+	return true;
     }
 #endif
 

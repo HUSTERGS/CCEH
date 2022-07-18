@@ -151,7 +151,7 @@ class CCEH : public Hash {
     CCEH(void);
     CCEH(size_t);
     ~CCEH(void);
-    void Insert(Key_t&, Value_t);
+    bool Insert(Key_t&, Value_t);
     bool InsertOnly(Key_t&, Value_t);
     bool Delete(Key_t&);
     Value_t Get(Key_t&);
